@@ -28,19 +28,24 @@ namespace Engine
             {
                 foreach (var primitive in node.Mesh.Primitives)
                 {
-                    var posAccessor = primitive.GetVertexAccessor("POSITION");
-                    var indexAccessor = primitive.IndexAccessor;
+                    var positions = primitive.GetVertexAccessor("POSITION").AsVector3Array();
+                    var normals = primitive.GetVertexAccessor("NORMAL")?.AsVector3Array();
+                    var localIndices = primitive.IndexAccessor.AsIndicesArray();
 
-                    var positions = posAccessor.AsVector3Array();
-                    var localIndices = indexAccessor.AsIndicesArray();
-
-                    foreach (var v in positions)
+                    for (int i = 0; i < positions.Count; i++)
                     {
-                        vertices.Add(v.X );
-                        vertices.Add(v.Y);
-                        vertices.Add(v.Z);
-                    }
+                        var pos = positions[i];
+                        var normal = normals[i];
 
+                        vertices.Add(pos.X);
+                        vertices.Add(pos.Y);
+                        vertices.Add(pos.Z);
+
+                        vertices.Add(normal.X);
+                        vertices.Add(normal.Y);
+                        vertices.Add(normal.Z);
+                    }
+                    
                     foreach (var i in localIndices)
                     {
                         indices.Add(vertexOffset + (uint)i);

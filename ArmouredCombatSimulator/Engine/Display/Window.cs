@@ -17,6 +17,8 @@ namespace Engine
 
         int ElementBufferObject;
 
+        int VerticesCount;
+
         Shader shader;
 
         Camera camera = new Camera(new Vector3(0, 0, 3));
@@ -28,13 +30,17 @@ namespace Engine
             base.OnLoad();
 
             CursorState = CursorState.Grabbed;
+            GL.Enable(EnableCap.CullFace);
+            GL.CullFace(TriangleFace.Back);
+            GL.Enable(EnableCap.DepthTest);
 
-            GL.ClearColor(0.70f, 0.63f, 0.54f, 1.0f);
+            GL.ClearColor(0f, 0f, 0f, 1.0f);
 
             VertexArrayObject = GL.GenVertexArray();
             GL.BindVertexArray(VertexArrayObject);
 
             ModelLoader.LoadGlbModel("Engine/Display/Models/2A46M.glb", out float[] vertices, out uint[] indices);
+            VerticesCount = indices.Count();
 
             VertexBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, VertexBufferObject);
@@ -44,8 +50,11 @@ namespace Engine
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, ElementBufferObject);
             GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsageHint.StaticDraw);
 
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
+
+            GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 3 * sizeof(float));
+            GL.EnableVertexAttribArray(1);
 
             shader = new Shader("Engine/Display/Shader/shader.vert", "Engine/Display/Shader/shader.frag");
             shader.Use();
@@ -55,12 +64,10 @@ namespace Engine
         {
             base.OnRenderFrame(e);
 
-            GL.Clear(ClearBufferMask.ColorBufferBit);
-
-            ModelLoader.LoadGlbModel("Engine/Display/Models/2A46M.glb", out float[] vertices, out uint[] indices);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             GL.BindVertexArray(VertexArrayObject);
-            GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, 0);
+            GL.DrawElements(PrimitiveType.Triangles, VerticesCount, DrawElementsType.UnsignedInt, 0);
 
             float aspectRatio = 1000.0f / 800.0f;
 
@@ -71,6 +78,10 @@ namespace Engine
             shader.SetMatrix4("model", model);
             shader.SetMatrix4("view", view);
             shader.SetMatrix4("projection", projection);
+
+            shader.SetVector3("lightDir", new Vector3(-0.3f, -1.0f, -0.5f));     // like sunlight from above
+            shader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));      // white sunlight
+            shader.SetVector3("objectColor", new Vector3(0.7f, 0.7f, 0.7f));   
             shader.Use();
 
             SwapBuffers();
@@ -121,12 +132,12 @@ namespace Engine
     public class Camera
     {
         public Vector3 Position { get; private set; }
-        public Vector3 Front { get; private set; } = Vector3.UnitZ * -1;
-        public Vector3 Up { get; private set; } = Vector3.UnitY;
+        public Vector3 Front { get; private set; } = Vector3.UnitZ * -1 * 2;
+        public Vector3 Up { get; private set; } = Vector3.UnitY * 2;
 
         private float yaw = -90f;   // yaw points -Z at start
         private float pitch = 0f;
-        private float fov = 45f;
+        private float fov = 80f;
 
         public Camera(Vector3 startPos)
         {

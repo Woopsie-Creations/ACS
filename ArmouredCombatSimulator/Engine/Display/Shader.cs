@@ -1,5 +1,6 @@
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using Vector3 = System.Numerics.Vector3;
 using System.Numerics;
 
 public class Shader
@@ -76,6 +77,12 @@ public class Shader
 
         var openTKMat = ConvertToOpenTK(mat);
         GL.UniformMatrix4(location, false, ref openTKMat);
+    }
+
+    public void SetVector3(string name, Vector3 value)
+    {
+        int loc = GL.GetUniformLocation(Handle, name);
+        GL.Uniform3(loc, value.X, value.Y, value.Z);
     }
 
     public static Matrix4 ConvertToOpenTK(Matrix4x4 m)
