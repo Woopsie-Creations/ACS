@@ -45,10 +45,10 @@ namespace Engine
                         vertices.Add(normal.Y);
                         vertices.Add(normal.Z);
                     }
-                    
+
                     foreach (var i in localIndices)
                     {
-                        indices.Add(vertexOffset + (uint)i);
+                        indices.Add(vertexOffset + i);
                     }
 
                     vertexOffset += (uint)positions.Count;
@@ -60,5 +60,21 @@ namespace Engine
                 TraverseNode(child, ref vertexOffset, vertices, indices);
             }
         }
+    }
+
+    class Canon
+    {
+        private float[] vertices;
+        private uint[] indices;
+
+        public Canon(string path)
+        {
+            ModelLoader.LoadGlbModel(path, out vertices, out indices);
+        }
+
+        public float[] Vertices() => vertices;
+        public uint[] Indices() => indices;
+
+        
     }
 }

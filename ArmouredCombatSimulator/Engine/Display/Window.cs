@@ -17,8 +17,10 @@ namespace Engine
 
         int ElementBufferObject;
 
-        int VerticesCount;
-
+        Canon _2a46m = new Canon("Engine/Display/Models/2A46M.glb");
+        float modelRotation;
+        float finalRotation;
+        
         Shader shader;
 
         Camera camera = new Camera(new Vector3(0, 0, 3));
@@ -39,16 +41,13 @@ namespace Engine
             VertexArrayObject = GL.GenVertexArray();
             GL.BindVertexArray(VertexArrayObject);
 
-            ModelLoader.LoadGlbModel("Engine/Display/Models/2A46M.glb", out float[] vertices, out uint[] indices);
-            VerticesCount = indices.Count();
-
             VertexBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, VertexBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ArrayBuffer, _2a46m.Vertices().Length * sizeof(float), _2a46m.Vertices(), BufferUsageHint.StaticDraw);
 
             ElementBufferObject = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, ElementBufferObject);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, _2a46m.Indices().Length * sizeof(uint), _2a46m.Indices(), BufferUsageHint.StaticDraw);
 
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
@@ -67,13 +66,13 @@ namespace Engine
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
             GL.BindVertexArray(VertexArrayObject);
-            GL.DrawElements(PrimitiveType.Triangles, VerticesCount, DrawElementsType.UnsignedInt, 0);
+            GL.DrawElements(PrimitiveType.Triangles, _2a46m.Indices().Count(), DrawElementsType.UnsignedInt, 0);
 
             float aspectRatio = 1000.0f / 800.0f;
 
             Matrix4x4 view = camera.GetViewMatrix();
             Matrix4x4 projection = camera.GetProjectionMatrix(aspectRatio);
-            Matrix4x4 model = Matrix4x4.Identity;
+            Matrix4x4 model = Matrix4x4.CreateRotationX(MathHelper.DegreesToRadians(finalRotation));;
 
             shader.SetMatrix4("model", model);
             shader.SetMatrix4("view", view);
@@ -103,6 +102,20 @@ namespace Engine
 
             if (direction != Vector3.Zero)
                 camera.Move(direction, (float)e.Time);
+
+            if (input.IsKeyDown(Keys.R) && !(modelRotation >= 100))
+            {
+                modelRotation += 20f * (float)e.Time; // 20% per second
+                finalRotation = modelRotation / 100 * 90;
+            }
+            if (input.IsKeyDown(Keys.F) && !(modelRotation <= 0))
+            {
+                modelRotation -= 20f * (float)e.Time; // 20% per second
+                finalRotation = modelRotation / 100 * 90;
+            }
+            
+            if (input.IsKeyDown(Keys.LeftAlt)) CursorState = CursorState.Normal;
+            else CursorState = CursorState.Grabbed;
 
             if (KeyboardState.IsKeyDown(Keys.Escape))
             {
