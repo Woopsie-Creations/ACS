@@ -5,7 +5,7 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using Vector3 = System.Numerics.Vector3;
 using System.Numerics;
-using OpenTK.Windowing.Common.Input;
+using ImGuiNET;
 
 namespace Engine
 {
@@ -17,9 +17,10 @@ namespace Engine
 
         int ElementBufferObject;
 
+        ImGuiController _imguiController;
+
         Canon _2a46m = new Canon("Engine/Display/Models/2A46M.glb");
         float modelRotation;
-        float finalRotation;
         
         Shader shader;
 
@@ -37,6 +38,8 @@ namespace Engine
             GL.Enable(EnableCap.DepthTest);
 
             GL.ClearColor(0f, 0f, 0f, 1.0f);
+
+            _imguiController = new ImGuiController(ClientSize.X, ClientSize.Y);
 
             VertexArrayObject = GL.GenVertexArray();
             GL.BindVertexArray(VertexArrayObject);
@@ -63,16 +66,18 @@ namespace Engine
         {
             base.OnRenderFrame(e);
 
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            _imguiController.Update(this, (float)e.Time);
+
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
 
             GL.BindVertexArray(VertexArrayObject);
             GL.DrawElements(PrimitiveType.Triangles, _2a46m.Indices().Count(), DrawElementsType.UnsignedInt, 0);
 
-            float aspectRatio = 1000.0f / 800.0f;
+            float aspectRatio = (float)ClientSize.X / (float)ClientSize.Y;
 
             Matrix4x4 view = camera.GetViewMatrix();
             Matrix4x4 projection = camera.GetProjectionMatrix(aspectRatio);
-            Matrix4x4 model = Matrix4x4.CreateRotationX(MathHelper.DegreesToRadians(finalRotation));;
+            Matrix4x4 model = Matrix4x4.CreateRotationX(MathHelper.DegreesToRadians(modelRotation));;
 
             shader.SetMatrix4("model", model);
             shader.SetMatrix4("view", view);
@@ -82,6 +87,27 @@ namespace Engine
             shader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));      // white sunlight
             shader.SetVector3("objectColor", new Vector3(0.7f, 0.7f, 0.7f));   
             shader.Use();
+
+            // ImGui.DockSpaceOverViewport();
+
+            ImGui.SetNextWindowPos(new System.Numerics.Vector2(0, ClientSize.Y - 400), ImGuiCond.Always);
+            ImGui.SetNextWindowSize(new System.Numerics.Vector2(250, 400), ImGuiCond.Always);
+
+            ImGui.Begin("Controls",
+                ImGuiWindowFlags.NoResize |
+                ImGuiWindowFlags.NoMove |
+                ImGuiWindowFlags.NoCollapse |
+                ImGuiWindowFlags.NoTitleBar);
+
+            ImGui.Text("Model Controls");
+            ImGui.Text("");
+
+            ImGui.Text("Rotation (in degrees) :");
+            ImGui.SliderFloat(".", ref modelRotation, 0f, 90f);
+
+            ImGui.End();
+
+            _imguiController.Render();
 
             SwapBuffers();
         }
@@ -103,29 +129,29 @@ namespace Engine
             if (direction != Vector3.Zero)
                 camera.Move(direction, (float)e.Time);
 
-            if (input.IsKeyDown(Keys.R) && !(modelRotation >= 100))
+            if (input.IsKeyDown(Keys.LeftAlt))
             {
-                modelRotation += 20f * (float)e.Time; // 20% per second
-                finalRotation = modelRotation / 100 * 90;
+                CursorState = CursorState.Normal;
+                camera.blockView = true;
             }
-            if (input.IsKeyDown(Keys.F) && !(modelRotation <= 0))
+            else
             {
-                modelRotation -= 20f * (float)e.Time; // 20% per second
-                finalRotation = modelRotation / 100 * 90;
+                CursorState = CursorState.Grabbed;
+                camera.blockView = false;
             }
-            
-            if (input.IsKeyDown(Keys.LeftAlt)) CursorState = CursorState.Normal;
-            else CursorState = CursorState.Grabbed;
 
             if (KeyboardState.IsKeyDown(Keys.Escape))
-            {
-                Close();
-            }
+                {
+                    Close();
+                }
         }
 
         protected override void OnResize(ResizeEventArgs e)
         {
             base.OnResize(e);
+
+            GL.Viewport(0, 0, ClientSize.X, ClientSize.Y);
+            _imguiController.WindowResized(ClientSize.X, ClientSize.Y);
         }
 
         protected override void OnUnload()
@@ -152,6 +178,8 @@ namespace Engine
         private float pitch = 0f;
         private float fov = 80f;
 
+        public bool blockView = false;
+
         public Camera(Vector3 startPos)
         {
             Position = startPos;
@@ -175,11 +203,14 @@ namespace Engine
 
         public void Rotate(float deltaX, float deltaY, float sensitivity = 0.1f)
         {
-            yaw += deltaX * sensitivity;
-            pitch -= deltaY * sensitivity;
+            if (!blockView)
+            {
+                yaw += deltaX * sensitivity;
+                pitch -= deltaY * sensitivity;
 
-            pitch = Math.Clamp(pitch, -89f, 89f);
-            UpdateVectors();
+                pitch = Math.Clamp(pitch, -89f, 89f);
+                UpdateVectors();
+            }
         }
 
         private void UpdateVectors()

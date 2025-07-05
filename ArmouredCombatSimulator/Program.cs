@@ -11,7 +11,7 @@ namespace ACS
         {
             var nativeWindowSettings = new NativeWindowSettings()
             {
-                ClientSize = new Vector2i(1000, 800),
+                ClientSize = new Vector2i(1600, 900),
                 Title = "ACS",
                 // This is needed to run on macos
                 Flags = ContextFlags.ForwardCompatible,
